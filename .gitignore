@@ -1,0 +1,122 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.pylintrc
+.black
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+.jest_cache/
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/build/
+*.tsbuildinfo
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Static files
+client/static/*
+!client/static/.gitkeep
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Cache
+cache/
+.cache/
+client/cache/
+client/uploads/
+*.sqlite
+*.db
+
+# Logs
+*.log
+logs/
+
+# OS
+Thumbs.db
+.DS_Store
+*.swp
+.vscode/settings.json
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*~
+
+# Build artifacts
+*.whl
+*.tar.gz
+
+# IDE specific
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Docker (if using)
+.dockerignore
+Dockerfile
+
+# Credentials (NEVER commit)
+.credentials
+credentials.json
+secrets.json
+*.pem
+*.key
+
+# Generated files
+feedback/
+*.generated.*

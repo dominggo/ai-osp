@@ -1,0 +1,80 @@
+# Build and Distribution
+node_modules/
+dist/
+build/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
+
+# Dependencies
+package-lock.json
+yarn.lock
+poetry.lock
+
+# Generated Files
+client/static/*
+!client/static/.gitkeep
+frontend/dist/
+*.tsbuildinfo
+
+# Logs and Temp
+*.log
+tmp/
+temp/
+*.tmp
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Cache
+.cache/
+cache/
+*.sqlite
+*.db
+.pytest_cache/
+.jest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage/
+.nyc_output/
+
+# Large Files
+node_modules/
+*.whl
+*.tar.gz
+
+# Credentials (Never include)
+.env
+.env.local
+credentials.json
+secrets.json
+*.pem
+*.key
+.credentials
+
+# Editor Temp
+*.swp
+*.swo
+*~
+*.bak
+
+# Feedback and Generated Data
+feedback/
+uploads/
+generated_plans/
