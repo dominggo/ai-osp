@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Assisted Fiber Network Planning - AI-OSP</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-draw/1.0.4/leaflet.draw.css" />
+
+    <!-- Application CSS -->
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <div id="app" x-data="appStore()" x-init="init()">
+        <!-- Top Navigation Bar -->
+        <nav class="navbar">
+            <div class="navbar-container">
+                <div class="navbar-brand">
+                    <h1>AI-OSP: Fiber Network Planning</h1>
+                </div>
+                <div class="navbar-menu">
+                    <span class="server-status" :class="serverStatus">
+                        <span x-show="connected">✓ Connected</span>
+                        <span x-show="!connected">✗ Offline</span>
+                    </span>
+                </div>
+            </div>
+        </nav>
+
+        <div class="main-container">
+            <!-- Left Sidebar: Controls -->
+            <div class="sidebar sidebar-left">
+                <div class="panel">
+                    <h2>Planning Configuration</h2>
+
+                    <!-- Server Selection -->
+                    <div class="control-group">
+                        <label>Server Selection</label>
+                        <div class="radio-group">
+                            <label>
+                                <input type="radio" name="server" value="a" x-model="planning.selectedServer" @change="checkServerHealth()">
+                                <span>Server A (Fast, <20 sites)</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="server" value="b" x-model="planning.selectedServer" @change="checkServerHealth()">
+                                <span>Server B (Complex, up to 1000 sites)</span>
+                            </label>
+                        </div>
+                        <div class="server-info">
+                            <template x-if="planning.selectedServer === 'a'">
+                                <div class="info-box info-success">
+                                    <strong>Server A (Always-On)</strong><br>
+                                    Response time: &lt;5 seconds<br>
+                                    Max sites: 20<br>
+                                    Status: <span x-text="serverHealthA?.status || 'Unknown'"></span>
+                                </div>
+                            </template>
+                            <template x-if="planning.selectedServer === 'b'">
+                                <div class="info-box info-warning">
+                                    <strong>Server B (On-Demand)</strong><br>
+                                    Response time: &lt;10 minutes<br>
+                                    Max sites: 1000<br>
+                                    Status: <span x-text="serverHealthB?.status || 'Unknown'"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Planning Mode Selection -->
+                    <div class="control-group">
+                        <label>Planning Mode</label>
+                        <div class="radio-group">
+                            <label>
+                                <input type="radio" name="mode" value="ftth" x-model="planning.mode">
+                                <span>FTTH (Fiber to the Home)</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="mode" value="p2p" x-model="planning.mode">
+                                <span>Non-FTTH (Point-to-Point)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- FTTH Options (conditionally shown) -->
+                    <template x-if="planning.mode === 'ftth'">
+                        <div class="control-group ftth-options">
+                            <label>FTTH Configuration</label>
+                            <div class="checkbox-group">
+                                <label>
+                                    <input type="checkbox" x-model="planning.ftth.includeFDC">
+                                    <span>Include FDC (Fiber Distribution Cabinet)</span>
+                                </label>
+                                <label>
+                                    <input type="checkbox" x-model="planning.ftth.includeFDP">
+                                    <span>Include FDP (Fiber Distribution Point)</span>
+                                </label>
+                                <label>
+                                    <input type="checkbox" x-model="planning.ftth.newODF">
+                                    <span>New ODF (Optical Distribution Frame)</span>
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label for="splitter-ratio">Splitter Ratio</label>
+                                <select id="splitter-ratio" x-model="planning.ftth.splitterRatio">
+                                    <option value="1:4">1:4</option>
+                                    <option value="1:8">1:8</option>
+                                    <option value="1:32">1:32</option>
+                                </select>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Layer Management -->
+                    <div class="control-group">
+                        <label>Layers</label>
+                        <div class="layer-manager">
+                            <template x-for="(layer, index) in map.layers" :key="index">
+                                <div class="layer-item">
+                                    <input type="checkbox" :id="'layer-' + index" x-model="layer.visible" @change="updateLayerVisibility(index)">
+                                    <label :for="'layer-' + index" x-text="layer.name"></label>
+                                    <button class="btn-small btn-danger" @click="removeLayer(index)">×</button>
+                                </div>
+                            </template>
+                            <button class="btn btn-primary" @click="triggerFileUpload()">Upload GeoJSON</button>
+                            <input type="file" id="geojson-upload" style="display:none" accept=".geojson,.json" @change="handleGeoJSONUpload($event)">
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="control-group button-group">
+                        <button class="btn btn-success btn-large" @click="startPlanning()" :disabled="!canPlan">
+                            Start Planning
+                        </button>
+                        <button class="btn btn-secondary" @click="clearSelection()">Clear Selection</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center: Map -->
+            <div id="map" class="map-container"></div>
+
+            <!-- Right Sidebar: Results & Export -->
+            <div class="sidebar sidebar-right" x-show="showResults">
+                <div class="panel">
+                    <h2>Planning Results</h2>
+
+                    <!-- Planning Status -->
+                    <template x-if="planning.status === 'planning'">
+                        <div class="info-box info-loading">
+                            <strong>Planning in Progress...</strong><br>
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                            </div>
+                            <p x-text="planning.message || 'Processing your network design...'"></p>
+                        </div>
+                    </template>
+
+                    <!-- Planning Results -->
+                    <template x-if="planning.status === 'success' && planning.results">
+                        <div class="info-box info-success">
+                            <strong>Planning Complete</strong><br>
+                            <p>Total segments: <span x-text="planning.results.segments || 'N/A'"></span></p>
+                            <p>Total distance: <span x-text="planning.results.distance || 'N/A'"></span> km</p>
+                            <p>Estimated cost: $<span x-text="planning.results.cost || 'N/A'"></span></p>
+                            <template x-if="planning.results.model_id">
+                                <p>Model: <span x-text="planning.results.model_id"></span></p>
+                            </template>
+                        </div>
+
+                        <!-- SPOF Analysis -->
+                        <div class="spof-section">
+                            <h3>SPOF Analysis</h3>
+                            <div class="info-box">
+                                <p>Critical nodes: <span x-text="planning.results.spof?.critical_nodes || 0"></span></p>
+                                <p>Redundancy score: <span x-text="(planning.results.spof?.redundancy_score * 100).toFixed(1) || 0"></span>%</p>
+                            </div>
+                            <button class="btn btn-secondary" @click="analyzeSPOF()">Run SPOF Analysis</button>
+                        </div>
+
+                        <!-- Export Section -->
+                        <div class="export-section">
+                            <h3>Export Design</h3>
+                            <div class="checkbox-group">
+                                <label>
+                                    <input type="checkbox" x-model="export.formats.geojson">
+                                    <span>GeoJSON</span>
+                                </label>
+                                <label>
+                                    <input type="checkbox" x-model="export.formats.kmz">
+                                    <span>KMZ (Google Earth)</span>
+                                </label>
+                                <label>
+                                    <input type="checkbox" x-model="export.formats.pdf">
+                                    <span>PDF Report</span>
+                                </label>
+                                <label>
+                                    <input type="checkbox" x-model="export.formats.excel">
+                                    <span>Excel (BOM/BOQ)</span>
+                                </label>
+                                <label>
+                                    <input type="checkbox" x-model="export.formats.image">
+                                    <span>Map Image (PNG)</span>
+                                </label>
+                            </div>
+
+                            <!-- Feedback Form (Mandatory) -->
+                            <div class="feedback-section">
+                                <h4>Feedback (Required before export)</h4>
+                                <div class="form-group">
+                                    <label>Rating</label>
+                                    <div class="rating-stars">
+                                        <template x-for="star in [1, 2, 3, 4, 5]">
+                                            <button class="star" :class="{ active: export.feedback.rating >= star }" @click="export.feedback.rating = star">★</button>
+                                        </template>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="feedback-text">Comments</label>
+                                    <textarea id="feedback-text" x-model="export.feedback.comments" placeholder="Any suggestions for improvement?"></textarea>
+                                </div>
+                                <button class="btn btn-info" @click="submitFeedback()">Submit Feedback</button>
+                            </div>
+
+                            <template x-if="export.feedback.submitted">
+                                <button class="btn btn-success btn-large" @click="exportDesign()">Export Design</button>
+                            </template>
+                            <template x-if="!export.feedback.submitted">
+                                <div class="warning-box">
+                                    ⚠️ Please submit feedback before exporting
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- Error State -->
+                    <template x-if="planning.status === 'error'">
+                        <div class="info-box info-danger">
+                            <strong>Planning Failed</strong><br>
+                            <p x-text="planning.error || 'Unknown error occurred'"></p>
+                            <button class="btn btn-secondary" @click="planning.status = null">Dismiss</button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-draw/1.0.4/leaflet.draw.js"></script>
+
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <!-- Application Scripts -->
+    <script src="js/stores/mapStore.js"></script>
+    <script src="js/stores/planningStore.js"></script>
+    <script src="js/stores/exportStore.js"></script>
+    <script src="js/services/api.js"></script>
+    <script src="js/components/map/mapContainer.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

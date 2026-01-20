@@ -40,11 +40,11 @@ def create_app(config_class=Config):
             'timestamp': __import__('datetime').datetime.utcnow().isoformat()
         }), 200
 
-    # Serve static frontend files in production
+    # Serve static frontend files (Alpine.js + Vanilla JS)
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_frontend(path):
-        """Serve React frontend files."""
+        """Serve Alpine.js frontend files."""
         static_dir = Path(__file__).parent / 'static'
 
         if path and (static_dir / path).exists():
@@ -54,7 +54,7 @@ def create_app(config_class=Config):
         if index_file.exists():
             return send_from_directory(static_dir, 'index.html')
 
-        return jsonify({'error': 'Frontend not built. Run: cd frontend && npm run build'}), 404
+        return jsonify({'error': 'Frontend files not found in static directory'}), 404
 
     # Error handlers
     @app.errorhandler(404)

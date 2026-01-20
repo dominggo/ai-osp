@@ -56,9 +56,10 @@ npm-debug.log
 yarn-error.log
 pnpm-debug.log
 
-# Static files
-client/static/*
-!client/static/.gitkeep
+# Static files - allow Alpine.js source, exclude build artifacts
+client/static/vendor/
+client/static/cache/
+client/static/*.zip
 
 # Environment
 .env
