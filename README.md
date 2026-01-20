@@ -19,14 +19,21 @@ AI-OSP combines a modern web interface with powerful AI planning algorithms to o
 ### Backend
 - **Client Application**: Flask (Python 3.10+)
 - **Remote Servers**: FastAPI (Python 3.10+)
-- **State Management**: Zustand (React)
-- **HTTP Client**: Axios
 
-### Frontend
-- **Framework**: React 18+ with TypeScript
-- **Build Tool**: Vite
-- **Mapping**: Leaflet.js with React-Leaflet
-- **Package Manager**: npm
+### Frontend (Zero Build Step!)
+- **Framework**: Alpine.js 3.x + Vanilla JavaScript
+- **Mapping**: Leaflet.js 1.9.4 (direct vanilla JS integration)
+- **Drawing Tools**: Leaflet.Draw 1.0.4
+- **State Management**: Alpine.js Stores
+- **HTTP Client**: Axios
+- **Build Tool**: None required! (direct static file serving)
+- **Package Manager**: None needed! (CDN or vendored libraries)
+
+### Key Feature: Zero npm Dependency
+- **No Node.js required** on client machines (Python 3.10+ only)
+- **Git pull + restart deployment** - no npm rebuild
+- **165KB total frontend** vs 450KB+ for React
+- **Direct static file serving** from Flask
 
 ### Data & Export
 - **GeoJSON Processing**: geojson, shapely
@@ -37,54 +44,49 @@ AI-OSP combines a modern web interface with powerful AI planning algorithms to o
 
 ```
 ai-osp/
-├── client/                  # Flask application
-│   ├── app.py              # Flask entry point
-│   ├── config.py           # Configuration
-│   ├── api/                # API endpoints
-│   ├── models/             # Data models
-│   ├── services/           # Business logic
-│   ├── exporters/          # Export implementations
-│   └── static/             # Frontend build output
+├── client/                      # Flask application
+│   ├── app.py                  # Flask entry point
+│   ├── config.py               # Configuration
+│   ├── api/                    # API endpoints
+│   ├── models/                 # Data models
+│   ├── services/               # Business logic
+│   ├── exporters/              # Export implementations
+│   └── static/                 # Alpine.js frontend (NO BUILD STEP!)
+│       ├── index.html          # Application shell
+│       ├── css/app.css         # Responsive styling
+│       └── js/
+│           ├── main.js         # Application entry
+│           ├── stores/         # Alpine.js stores
+│           ├── services/       # API client
+│           └── components/     # Leaflet map component
 │
-├── frontend/               # React TypeScript application
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── stores/         # Zustand stores
-│   │   ├── services/       # API services
-│   │   └── utils/          # Utilities
-│   ├── package.json
-│   └── vite.config.ts
+├── server/                     # FastAPI remote servers
+│   ├── main.py                # FastAPI entry point
+│   ├── config.py              # Server configuration
+│   ├── api/                   # API endpoints
+│   └── services/              # Planning algorithms
 │
-├── server/                 # FastAPI remote servers
-│   ├── main.py            # FastAPI entry point
-│   ├── config.py          # Server configuration
-│   ├── api/               # API endpoints
-│   └── services/          # Planning algorithms
-│
-├── tests/                 # Test suites
-├── docs/                  # Documentation
-├── scripts/               # Utility scripts
-└── PLAN.md               # Implementation plan
+├── tests/                     # Test suites
+├── docs/                      # Documentation
+├── scripts/                   # Utility scripts
+├── PLAN.md                    # Implementation plan
+├── README.md                  # This file
+└── .env.example              # Configuration template
 ```
 
 ## Installation
 
 ### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- npm
+- **Python 3.10+** (that's it!)
+- No Node.js needed
+- No npm needed
 
 ### Quick Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ai-osp.git
+git clone https://github.com/dominggo/ai-osp.git
 cd ai-osp
-
-# Run setup script
-bash scripts/setup.sh
-
-# Or manual setup:
 
 # 1. Set up client
 cd client
@@ -93,50 +95,70 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cd ..
 
-# 2. Set up frontend
-cd frontend
-npm install
-cd ..
-
-# 3. Set up server
+# 2. Set up server
 cd server
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cd ..
 
-# 4. Configure environment
+# 3. Configure environment
 cp .env.example .env
 # Edit .env with appropriate values
 ```
+
+### That's it!
+No npm install, no build step, no Node.js required. Frontend served directly from Flask.
 
 ## Development
 
 ### Run All Services
 
 ```bash
-# Terminal 1: Flask client
+# Terminal 1: Flask client (serves Alpine.js frontend directly)
 cd client
 source venv/bin/activate
 python app.py
 # Runs on http://localhost:5000
+# Frontend served from static/ - NO BUILD STEP!
 
-# Terminal 2: React frontend
-cd frontend
-npm run dev
-# Runs on http://localhost:5173 (proxies API to Flask)
-
-# Terminal 3: FastAPI Server A
+# Terminal 2: FastAPI Server A
 cd server
 SERVER_ID=A source venv/bin/activate
 python main.py
 # Runs on http://localhost:8000
 
-# Terminal 4: FastAPI Server B (optional)
+# Terminal 3: FastAPI Server B (optional, for complex plans)
 cd server
 SERVER_ID=B source venv/bin/activate
 python main.py
 # Runs on http://localhost:8001
+```
+
+### Development Workflow
+
+```bash
+# Edit Alpine.js files in client/static/
+# - index.html
+# - css/app.css
+# - js/main.js
+# - js/stores/*.js
+# - js/components/*.js
+
+# No build required! Just refresh browser to see changes
+# Flask serves files directly from static/
+
+# Push changes to GitHub
+git add .
+git commit -m "feat: your changes"
+git push origin main
+
+# Deploy to production (Proxmox LXC)
+ssh root@claude.aku
+cd /opt/ai-osp
+git pull origin main
+systemctl restart fiber-client
+# Done! Updates live in seconds, no npm rebuild
 ```
 
 ### Or Use Development Script
@@ -148,35 +170,42 @@ bash scripts/dev.sh
 ## Testing
 
 ```bash
-# Python tests
+# Python tests (client)
 cd client
 pytest tests/ -v
-cd ../server
-pytest tests/ -v
 
-# React tests
-cd frontend
-npm test
-npm test -- --coverage
+# Python tests (server)
+cd server
+pytest tests/ -v
 
 # All tests
 bash scripts/test_all.sh
 ```
 
-## Building
+## Deployment
 
-### Production Build
+### Production Setup
 
 ```bash
-# Build frontend
-cd frontend
-npm run build
-
-# Frontend output goes to client/static/
+# Frontend already in client/static/ - no build needed!
 
 # Start Flask production server
-cd ../client
+cd client
 python app.py
+# Runs on http://localhost:5000
+
+# Or via systemd service
+systemctl restart fiber-client
+```
+
+### Docker Deployment (Optional)
+
+```dockerfile
+FROM python:3.10-slim
+WORKDIR /app
+COPY client/ .
+RUN pip install -r requirements.txt
+CMD ["python", "app.py"]
 ```
 
 ## Configuration
@@ -290,9 +319,10 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for security setup.
 ## Development Standards
 
 - **Python**: PEP 8, type hints, pytest coverage
-- **TypeScript**: ESLint, Prettier, Jest tests
+- **JavaScript**: Clean code, ES6+, comments for complex logic
+- **Frontend**: Alpine.js conventions, vanilla JS best practices
 - **Commits**: Clear messages, atomic commits
-- **Documentation**: Docstrings, API docs, user guides
+- **Documentation**: Docstrings (Python), JSDoc (JS), API docs, user guides
 
 ## Troubleshooting
 
@@ -300,7 +330,8 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for security setup.
 ```bash
 # Find and kill process on port
 lsof -ti:5000 | xargs kill -9  # Flask
-lsof -ti:5173 | xargs kill -9  # Vite
+lsof -ti:8000 | xargs kill -9  # FastAPI Server A
+lsof -ti:8001 | xargs kill -9  # FastAPI Server B
 ```
 
 ### Virtual Environment Issues
@@ -313,13 +344,21 @@ source client/venv/bin/activate
 pip install -r client/requirements.txt
 ```
 
-### Frontend Build Issues
+### Frontend Not Displaying
 ```bash
-# Clean and rebuild
-cd frontend
-rm -rf node_modules dist
-npm install
-npm run build
+# Check Flask is serving static files
+# Verify client/static/index.html exists
+ls -la client/static/
+
+# Check browser console for errors
+# Verify Alpine.js and Leaflet.js load from CDN
+```
+
+### Map Not Rendering
+```bash
+# Check browser console for Leaflet errors
+# Verify CDN URLs are accessible
+# Check Leaflet CSS is loaded: client/static/css/app.css
 ```
 
 ## License

@@ -11,24 +11,30 @@ Build a Python-based web application for AI-assisted fiber network planning (FTT
   - Built-in development server
   - Simple routing and API structure
 
-- **Frontend Framework**: React 18+ with TypeScript
-  - Modern component-based architecture
-  - Strong typing for complex GIS data
-  - Rich ecosystem for map visualization
+- **Frontend Framework**: Alpine.js 3.x + Vanilla JavaScript
+  - **Zero build step** - Direct serving from static/ directory
+  - **Git pull + restart deployment** - No npm rebuild required
+  - **Lightweight** - 165KB total vs 450KB+ for React
+  - Alpine.js for reactive UI state management
+  - Vanilla JS for Leaflet map integration
 
-- **Map Library**: Leaflet.js with React-Leaflet
+- **Map Library**: Leaflet.js (1.9.4) with Leaflet.Draw
   - Open-source, lightweight
   - Excellent GeoJSON support
   - Extensible drawing/editing capabilities
   - Works well with OSM data
+  - Direct vanilla JS integration (no wrapper library)
 
-- **State Management**: Zustand
-  - Lightweight, less boilerplate than Redux
-  - Suitable for GIS application state
+- **State Management**: Alpine.js Stores
+  - Lightweight reactive stores (similar to Zustand)
+  - Less boilerplate than Redux
+  - Perfect for GIS application state
+  - Stores: mapStore, planningStore, exportStore
 
 - **HTTP Client**: Axios
   - Promise-based
   - Easy request/response interceptors for auth
+  - CDN-loaded for zero npm dependency
 
 ### Server Application (A & B)
 - **Framework**: FastAPI (Python 3.10+)
@@ -48,15 +54,16 @@ Build a Python-based web application for AI-assisted fiber network planning (FTT
 - **Image Export**: Pillow + selenium (for map screenshots)
 
 ### Development Tools
-- **Build Tool**: Vite (for React frontend)
-- **Package Management**: pip + requirements.txt, npm
-- **Linting**: pylint/black (Python), ESLint/Prettier (TypeScript)
-- **Testing**: pytest (Python), Jest/RTL (React)
+- **Build Tool**: None required (direct static file serving)
+- **Package Management**: pip + requirements.txt only (no npm)
+- **Linting**: pylint/black (Python)
+- **Testing**: pytest (Python)
+- **Frontend Libraries**: CDN or vendored locally
 
 ## Project Structure
 
 ```
-ai-fiber-planning/
+ai-osp/
 ├── client/                          # Python Flask application
 │   ├── app.py                       # Flask app entry point
 │   ├── config.py                    # Configuration management
@@ -81,43 +88,22 @@ ai-fiber-planning/
 │   │   ├── pdf_exporter.py
 │   │   ├── image_exporter.py
 │   │   └── excel_exporter.py
-│   ├── static/                      # Frontend build output (Vite)
+│   ├── static/                      # Alpine.js frontend (NO BUILD STEP)
+│   │   ├── index.html               # Main application shell
+│   │   ├── css/
+│   │   │   └── app.css              # Complete responsive styling
+│   │   └── js/
+│   │       ├── main.js              # Application entry point
+│   │       ├── stores/              # Alpine.js stores
+│   │       │   ├── mapStore.js      # Map state (layers, selections)
+│   │       │   ├── planningStore.js # Planning state (requests, results)
+│   │       │   └── exportStore.js   # Export state
+│   │       ├── services/
+│   │       │   └── api.js           # Axios API client
+│   │       └── components/
+│   │           └── map/
+│   │               └── mapContainer.js # Leaflet map component
 │   └── requirements.txt             # Python dependencies
-│
-├── frontend/                        # React TypeScript application
-│   ├── src/
-│   │   ├── App.tsx                  # Root component
-│   │   ├── main.tsx                 # Entry point
-│   │   ├── components/
-│   │   │   ├── Map/
-│   │   │   │   ├── MapContainer.tsx        # Main map component
-│   │   │   │   ├── LayerManager.tsx        # GeoJSON layer management
-│   │   │   │   ├── DrawingTools.tsx        # Route drawing tools
-│   │   │   │   └── SiteSelector.tsx        # Site selection UI
-│   │   │   ├── Planning/
-│   │   │   │   ├── ServerSelector.tsx      # Server A/B selection
-│   │   │   │   ├── PlanningModeSelector.tsx # FTTH/non-FTTH selection
-│   │   │   │   ├── FTTHOptions.tsx         # FTTH configuration panel
-│   │   │   │   └── PlanningResults.tsx     # Display AI proposals
-│   │   │   ├── Export/
-│   │   │   │   ├── ExportPanel.tsx         # Export format selection
-│   │   │   │   └── FeedbackForm.tsx        # Mandatory feedback form
-│   │   │   └── SPOF/
-│   │   │       ├── SPOFAnalysis.tsx        # SPOF tagging UI
-│   │   │       └── SPOFMetrics.tsx         # SPOF metrics display
-│   │   ├── stores/
-│   │   │   ├── mapStore.ts          # Map state (layers, selections)
-│   │   │   ├── planningStore.ts     # Planning state (requests, results)
-│   │   │   └── exportStore.ts       # Export state
-│   │   ├── services/
-│   │   │   ├── api.ts               # API client (Axios)
-│   │   │   └── types.ts             # TypeScript type definitions
-│   │   └── utils/
-│   │       ├── geojson.ts           # GeoJSON utilities
-│   │       └── validation.ts        # Input validation
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── vite.config.ts
 │
 ├── server/                          # Remote server implementation (A & B)
 │   ├── main.py                      # FastAPI app entry point
@@ -141,11 +127,9 @@ ai-fiber-planning/
 │   │   ├── test_planning_service.py
 │   │   ├── test_spof_analyzer.py
 │   │   └── test_exporters.py
-│   ├── server/
-│   │   ├── test_ftth_planner.py
-│   │   └── test_p2p_planner.py
-│   └── frontend/
-│       └── __tests__/
+│   └── server/
+│       ├── test_ftth_planner.py
+│       └── test_p2p_planner.py
 │
 ├── docs/                            # Documentation
 │   ├── API.md                       # API contract specification
@@ -159,58 +143,72 @@ ai-fiber-planning/
 ├── .env.example                     # Environment variables template
 ├── .gitignore
 ├── README.md
-└── CLAUDE.md                        # This file
+└── PLAN.md                          # This file (implementation plan)
 ```
 
 ## Implementation Phases
 
 ### Phase 1: Project Setup & Core Infrastructure (Week 1)
-**Goal**: Establish project structure, development environment, and basic client-server communication
+**Goal**: Establish project structure, development environment, and basic client-server communication with Alpine.js frontend
 
-**Tasks**:
-1. Initialize project structure
-   - Create directory hierarchy
-   - Set up Python virtual environment
-   - Initialize Flask application
-   - Initialize React + Vite frontend
-   - Configure TypeScript
+**Status**: ✅ COMPLETED
 
-2. Set up development tooling
-   - Configure linting (pylint, ESLint)
-   - Set up testing frameworks (pytest, Jest)
-   - Create development scripts
-   - Configure environment variables
+**Tasks Completed**:
+1. ✅ Initialized project structure
+   - Directory hierarchy created
+   - Python virtual environment configured
+   - Flask application initialized
+   - Alpine.js + Vanilla JS frontend created (NO npm required!)
 
-3. Implement basic Flask server
-   - Create Flask app with CORS support
-   - Set up static file serving for React build
-   - Implement health check endpoint
-   - Add basic error handling
+2. ✅ Set up Alpine.js frontend
+   - Alpine.js 3.x state stores (mapStore, planningStore, exportStore)
+   - Leaflet.js map component (Vanilla JS)
+   - Responsive CSS styling
+   - Axios API client
+   - Direct static file serving (no build step)
 
-4. Implement basic React UI
-   - Set up routing
-   - Create basic layout structure
-   - Integrate Leaflet.js map
-   - Test basic map rendering
+3. ✅ Implemented Flask server
+   - Flask app with CORS support
+   - Static file serving for Alpine.js frontend
+   - Health check endpoint
+   - Error handling
 
-5. Set up FastAPI remote server skeleton
-   - Create FastAPI application
-   - Implement /health endpoint
-   - Set up basic logging
-   - Add CORS and TLS configuration
+4. ✅ Created Alpine.js application UI
+   - HTML structure with Alpine directives
+   - Responsive layout (left/center/right sidebars)
+   - Server selection UI
+   - Planning configuration panel
+   - Layer management
+   - Export & feedback forms
 
-**Critical Files**:
-- `client/app.py`
-- `frontend/src/App.tsx`
-- `frontend/src/components/Map/MapContainer.tsx`
-- `server/main.py`
+5. ✅ Set up FastAPI remote server skeleton
+   - FastAPI application created
+   - /health endpoint implemented
+   - Logging configured
+   - CORS enabled
 
-**Verification**:
+**Critical Files Created**:
+- `client/app.py` - Flask entry point
+- `client/static/index.html` - Alpine.js app shell (250 lines)
+- `client/static/css/app.css` - Responsive styling (600 lines)
+- `client/static/js/main.js` - Application entry point (250 lines)
+- `client/static/js/stores/mapStore.js` - Map state management
+- `client/static/js/stores/planningStore.js` - Planning state
+- `client/static/js/stores/exportStore.js` - Export & feedback state
+- `client/static/js/services/api.js` - Axios API client (200 lines)
+- `client/static/js/components/map/mapContainer.js` - Leaflet map (350 lines)
+- `server/main.py` - FastAPI entry point
+
+**Verification** ✅:
 - Run `python client/app.py` - Flask server starts on port 5000
-- Run `cd frontend && npm run dev` - Vite dev server starts
-- Navigate to `http://localhost:5173` - Map displays correctly
-- Run `python server/main.py` - FastAPI server starts
-- Access `/health` endpoint returns 200 OK
+- Navigate to `http://localhost:5000` - Alpine.js app displays
+- Leaflet map renders at default location
+- Alpine.js stores initialize (check browser console)
+- No npm or Node.js required!
+- Git pull + restart deployment ready
+- All files committed to GitHub
+
+**Key Achievement**: **Zero build step** - Clients deploy via simple `git pull` + `systemctl restart` without npm rebuild
 
 ---
 
@@ -611,27 +609,21 @@ ai-fiber-planning/
 # Clone/navigate to project directory
 cd P:/OneDrive/sync/project/12_ai_planning_tools
 
-# Run setup script (will be created)
-bash scripts/setup.sh
+# Python only - NO npm required!
 
-# Or manual setup:
 # 1. Set up client
 cd client
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# 2. Set up frontend
-cd ../frontend
-npm install
-
-# 3. Set up server
+# 2. Set up server
 cd ../server
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# 4. Configure environment
+# 3. Configure environment
 cp .env.example .env
 # Edit .env with appropriate values
 ```
@@ -639,48 +631,66 @@ cp .env.example .env
 ### Development
 
 ```bash
-# Run Flask backend (from client/)
+# Terminal 1: Run Flask backend (from client/)
+cd client
 source venv/bin/activate
 python app.py
 # Runs on http://localhost:5000
+# Serves Alpine.js frontend from static/ directly - NO BUILD STEP!
 
-# Run React frontend dev server (from frontend/)
-npm run dev
-# Runs on http://localhost:5173
-
-# Run FastAPI remote server (from server/)
-source venv/bin/activate
+# Terminal 2: Run FastAPI Server A (from server/)
+cd server
+SERVER_ID=A source venv/bin/activate
 python main.py
-# Runs on http://localhost:8000 (Server A) or 8001 (Server B)
+# Runs on http://localhost:8000
+
+# Terminal 3: Run FastAPI Server B (from server/) - optional
+cd server
+SERVER_ID=B source venv/bin/activate
+python main.py
+# Runs on http://localhost:8001
 
 # Or use the dev script (will be created):
 bash scripts/dev.sh
+```
+
+### Development Workflow with Git
+
+```bash
+# Edit Alpine.js files in client/static/
+# - index.html
+# - css/app.css
+# - js/*.js files
+
+# No build required - Flask serves files directly!
+# Just refresh browser to see changes
+
+# Deploy to production:
+git add .
+git commit -m "feat: your changes"
+git push origin main
+
+# On remote machine (e.g., Proxmox LXC):
+ssh root@claude.aku
+cd /opt/ai-osp
+git pull origin main
+systemctl restart fiber-client
+# Done! Updates live in seconds
 ```
 
 ### Testing
 
 ```bash
 # Run Python tests (from client/ or server/)
+cd client
 pytest tests/ -v
 pytest tests/test_spof_analyzer.py  # Single test file
 
-# Run React tests (from frontend/)
-npm test
-npm test -- --coverage  # With coverage report
+cd ../server
+pytest tests/ -v
 
 # Run all tests
 bash scripts/test_all.sh  # Will be created
-```
-
-### Building
-
-```bash
-# Build React frontend for production (from frontend/)
-npm run build
-# Outputs to frontend/dist/
-
-# Build distributable package
-bash scripts/build.sh  # Will be created
 ```
 
 ### Linting
@@ -689,10 +699,6 @@ bash scripts/build.sh  # Will be created
 # Python linting (from client/ or server/)
 pylint client/
 black client/  # Auto-format
-
-# TypeScript linting (from frontend/)
-npm run lint
-npm run lint:fix  # Auto-fix
 ```
 
 ## Key Technical Decisions
@@ -715,11 +721,15 @@ npm run lint:fix  # Auto-fix
 - **Lightweight**: Smaller bundle size
 - **Flexibility**: Easy to customize and extend
 
-### 4. Why Zustand instead of Redux?
-- **Simplicity**: Less boilerplate, easier to learn
-- **Performance**: Minimal re-renders
-- **Size**: Much smaller bundle size (~1KB vs ~10KB)
-- **TypeScript**: Excellent TypeScript support
+### 4. Why Alpine.js + Vanilla JS instead of React?
+- **Zero build step**: Direct static file serving, no npm rebuild
+- **Git pull deployment**: Clients update via simple `git pull && systemctl restart`
+- **Lightweight**: 165KB total vs 450KB+ for React
+- **Simple state management**: Alpine.js stores (similar to Zustand)
+- **Easy frontend updates**: No TypeScript compilation, no bundler complexity
+- **Perfect for GIS apps**: Vanilla Leaflet integration without wrapper libraries
+- **Python-only deployment**: No Node.js required on client machines
+- **Responsive UI**: Alpine.js provides reactive updates without framework overhead
 
 ### 5. Client-Server Architecture Design
 - **Dual-server approach**: Allows cost optimization (Server A always-on, Server B on-demand)
@@ -731,15 +741,18 @@ npm run lint:fix  # Auto-fix
 
 | File | Purpose |
 |------|---------|
-| `client/app.py` | Flask application entry point, serves frontend |
+| `client/app.py` | Flask application entry point, serves Alpine.js frontend |
+| `client/static/index.html` | Alpine.js application shell with directives |
+| `client/static/css/app.css` | Responsive styling (600+ lines) |
+| `client/static/js/main.js` | Application entry point and app logic |
+| `client/static/js/stores/mapStore.js` | Map layers and GeoJSON state |
+| `client/static/js/stores/planningStore.js` | Planning requests and results state |
+| `client/static/js/stores/exportStore.js` | Export formats and feedback state |
+| `client/static/js/services/api.js` | Axios API client wrapper |
+| `client/static/js/components/map/mapContainer.js` | Leaflet map initialization and management |
 | `client/services/planning_service.py` | Orchestrates planning requests to Server A/B |
 | `client/services/spof_analyzer.py` | SPOF analysis logic |
 | `client/services/bom_generator.py` | BOM/BOQ generation logic |
-| `frontend/src/App.tsx` | React application root |
-| `frontend/src/components/Map/MapContainer.tsx` | Main map component with Leaflet |
-| `frontend/src/components/Planning/ServerSelector.tsx` | Server A/B selection UI |
-| `frontend/src/stores/mapStore.ts` | GeoJSON layers and map state |
-| `frontend/src/stores/planningStore.ts` | Planning requests and results state |
 | `server/main.py` | FastAPI application entry point |
 | `server/services/ftth_planner.py` | FTTH planning algorithm |
 | `server/services/p2p_planner.py` | Non-FTTH P2P planning algorithm |
@@ -770,12 +783,15 @@ npm run lint:fix  # Auto-fix
 
 ## Success Metrics
 
-- **Setup time**: < 5 minutes on fresh Python installation
+- **Setup time**: < 5 minutes on fresh Python installation (no Node.js needed!)
+- **Frontend load time**: < 1 second (direct static serving)
+- **Git pull + restart deployment**: < 30 seconds total
 - **Planning request latency**: Server A <5s, Server B <10min
 - **Export success rate**: >99% for all formats
 - **Code coverage**: >80% for critical services
-- **Bundle size**: Frontend <2MB gzipped
+- **Frontend bundle**: 165KB total (Alpine + Leaflet + CSS + JS)
 - **Map performance**: 60 FPS with 100+ GeoJSON features loaded
+- **No npm requirement**: Python 3.10+ only on client machines
 
 ## Next Steps After Plan Approval
 
